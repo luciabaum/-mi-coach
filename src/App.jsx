@@ -1,3 +1,5 @@
+Abrí src/App.jsx, tocá el lápiz ✏️, seleccioná todo y reemplazá con esto:
+
 import { useState, useEffect, useRef } from "react";
 
 const SYSTEM_PROMPT = `Sos una entrenadora personal experta y empática llamada "Coach". Conocés muy bien a tu clienta y tenés toda su información:
@@ -27,7 +29,7 @@ const INITIAL_MESSAGE = { role: "assistant", content: "¡Hola! 💜 Soy tu Coach
 
 const EXERCISE_TIPS = {
   squat: "Pies a ancho de hombros, puntas levemente hacia afuera. Bajá como si fueras a sentarte en una silla, rodillas alineadas con los pies. Pecho arriba, espalda recta. Bajá hasta que los muslos queden paralelos al piso.",
-  hipthrust: "Apoyá la parte alta de la espalda en el banco. Pies apoyados en el piso a ancho de caderas. Empujá la cadera hacia arriba apretando los glúteos al máximo arriba. Bajá sin tocar el piso y volvé a subir.",
+  hipthrust: "Apoyá la parte alta de la espalda en el banco. Pies apoyados en el piso a ancho de caderas. Empujá la cadera hacia arriba apretando los glúteos al máximo. Bajá sin tocar el piso y volvé a subir.",
   rdl: "Pies a ancho de caderas, barra cerca del cuerpo. Inclinarte hacia adelante empujando las caderas hacia atrás, espalda recta. Sentís el estiramiento en los isquiotibiales. Volvé apretando glúteos.",
   abduction: "Sentada en la máquina con la espalda bien apoyada. Abrí las piernas hacia afuera de forma controlada. Resistí el cierre lento. Enfocate en sentir el trabajo en la parte externa del glúteo.",
   bench: "Acostada en el banco, mancuernas a la altura del pecho. Codos a 45° del cuerpo. Empujá hacia arriba y adentro juntando las mancuernas arriba. Bajá de forma controlada.",
@@ -79,7 +81,6 @@ const PHASE_WEEKS = 4;
 const WATER_GOAL = 2500;
 const C = { bg: "#2c2a35", surface: "#3a3845", border: "#4e4a5e", purple: "#b39ddb", purpleDark: "#4a4560", purpleBorder: "#6b6485", text: "#ede8f5", muted: "#9e99b0", deep: "#242230" };
 const F = "Tahoma, sans-serif";
-
 const todayKey = () => new Date().toISOString().split("T")[0];
 
 export default function App() {
@@ -95,6 +96,7 @@ export default function App() {
   const [showLogModal, setShowLogModal] = useState(false);
   const [showWeightModal, setShowWeightModal] = useState(false);
   const [showStartModal, setShowStartModal] = useState(false);
+  const [editingWorkout, setEditingWorkout] = useState(null);
   const [editingWeight, setEditingWeight] = useState(null);
   const [logDay, setLogDay] = useState(0);
   const [logNotes, setLogNotes] = useState("");
@@ -138,7 +140,6 @@ export default function App() {
     return { week: Math.min(PHASE_WEEKS, Math.floor(elapsed / 7) + 1), daysLeft: Math.max(0, total - elapsed), pct: Math.min(100, (elapsed / total) * 100) };
   };
 
-  // Water
   const todayWater = water[todayKey()] || 0;
   const addWater = (ml) => {
     const key = todayKey();
@@ -167,50 +168,66 @@ export default function App() {
     setLoading(false);
   };
 
+  const openEditWorkout = (w) => {
+    setEditingWorkout(w);
+    setLogDay(ROUTINE.days.findIndex(d => d.label === w.day));
+    setLogNotes(w.notes || "");
+    setLogExW(w.exWeights || {});
+    setLogBodyW("");
+    setLogCardioMin(w.cardioMin || "");
+    setLogAbsSets(w.absSets || {});
+    setLogAbsReps(w.absReps || {});
+    setShowLogModal(true);
+  };
+
+  const deleteWorkout = (id) => {
+    const updated = workouts.filter(x => x.id !== id);
+    setWorkouts(updated); save("fc_workouts", updated);
+  };
+
   const logWorkout = () => {
     const day = ROUTINE.days[logDay];
     const date = new Date().toLocaleDateString("es-AR");
     const newEl = { ...exLogs };
 
-    // Exercise weights
     day.exercises.forEach(ex => {
       if (logExW[ex.id]) {
         if (!newEl[ex.id]) newEl[ex.id] = [];
         newEl[ex.id].push({ date, weight: logExW[ex.id] });
       }
     });
-
-    // Abs logs
     ROUTINE.abs.forEach(ab => {
-      const sets = logAbsSets[ab.id];
-      const reps = logAbsReps[ab.id];
-      if (sets || reps) {
+      if (logAbsSets[ab.id] || logAbsReps[ab.id]) {
         if (!newEl[ab.id]) newEl[ab.id] = [];
-        newEl[ab.id].push({ date, sets: sets || "—", reps: reps || "—" });
+        newEl[ab.id].push({ date, sets: logAbsSets[ab.id] || "—", reps: logAbsReps[ab.id] || "—" });
       }
     });
-
-    // Cardio
     if (logCardioMin) {
       const cid = `cardio_d${logDay}`;
       if (!newEl[cid]) newEl[cid] = [];
       newEl[cid].push({ date, minutes: logCardioMin, goal: day.cardioMin });
     }
-
     setExLogs(newEl); save("fc_exlogs", newEl);
+
     if (logBodyW) {
       const newBws = [...bodyWeights, { date, weight: parseFloat(logBodyW), id: Date.now() }];
       setBodyWeights(newBws); save("fc_bodyweights", newBws);
     }
-    const w = { id: Date.now(), date, day: day.label, subtitle: day.subtitle, notes: logNotes };
-    const newWs = [w, ...workouts]; setWorkouts(newWs); save("fc_workouts", newWs);
+
+    if (editingWorkout) {
+      const updated = workouts.map(x => x.id === editingWorkout.id ? { ...x, day: day.label, subtitle: day.subtitle, notes: logNotes, exWeights: { ...logExW }, cardioMin: logCardioMin, absSets: { ...logAbsSets }, absReps: { ...logAbsReps } } : x);
+      setWorkouts(updated); save("fc_workouts", updated);
+    } else {
+      const w = { id: Date.now(), date, day: day.label, subtitle: day.subtitle, notes: logNotes, exWeights: { ...logExW }, cardioMin: logCardioMin, absSets: { ...logAbsSets }, absReps: { ...logAbsReps } };
+      const newWs = [w, ...workouts]; setWorkouts(newWs); save("fc_workouts", newWs);
+    }
+
     const summary = day.exercises.filter(e => logExW[e.id]).map(e => `${e.name}: ${logExW[e.id]}kg`).join(", ");
-    const msg = `Registré: ${day.label} (${day.subtitle}). ${logBodyW ? `Peso: ${logBodyW}kg.` : ""} ${summary ? `Pesos: ${summary}.` : ""} ${logCardioMin ? `Cardio: ${logCardioMin}min de ${day.cardioMin}min.` : ""} ${logNotes || ""}`;
-    setShowLogModal(false); setLogNotes(""); setLogBodyW(""); setLogExW({}); setLogAbsSets({}); setLogAbsReps({}); setLogCardioMin("");
+    const msg = `${editingWorkout ? "Edité" : "Registré"}: ${day.label} (${day.subtitle}). ${logBodyW ? `Peso: ${logBodyW}kg.` : ""} ${summary ? `Pesos: ${summary}.` : ""} ${logCardioMin ? `Cardio: ${logCardioMin}min de ${day.cardioMin}min.` : ""} ${logNotes || ""}`;
+    setShowLogModal(false); setLogNotes(""); setLogBodyW(""); setLogExW({}); setLogAbsSets({}); setLogAbsReps({}); setLogCardioMin(""); setEditingWorkout(null);
     sendMessage(msg); setTab("chat");
   };
 
-  // Body weight CRUD
   const saveNewBW = () => {
     if (!newBW) return;
     if (editingWeight) {
@@ -233,7 +250,7 @@ export default function App() {
     if (logs.length < 2) return null;
     const first = parseFloat(logs[0].weight), last = parseFloat(logs[logs.length-1].weight);
     if (isNaN(first) || isNaN(last)) return null;
-    return { diff: (last - first).toFixed(1), last: logs[logs.length-1].weight };
+    return { diff: (last - first).toFixed(1) };
   };
 
   const pi = getPhaseInfo();
@@ -241,7 +258,7 @@ export default function App() {
   const bwDiff = bodyWeights.length > 1 ? (currentBW - bodyWeights[0].weight).toFixed(1) : null;
   const weekWos = workouts.filter(w => (Date.now() - w.id) < 7*86400000).length;
   const waterPct = Math.min(100, (todayWater / WATER_GOAL) * 100);
-  const waterColor = waterPct >= 100 ? "#88c9a1" : waterPct >= 60 ? "#89b4e8" : "#b39ddb";
+  const waterColor = waterPct >= 100 ? "#88c9a1" : waterPct >= 60 ? "#89b4e8" : C.purple;
 
   const card = (children, extra = {}) => (
     <div style={{ background: C.surface, borderRadius: 12, padding: 14, border: `1px solid ${C.border}`, marginBottom: 14, ...extra }}>{children}</div>
@@ -250,7 +267,6 @@ export default function App() {
   return (
     <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: F, display: "flex", flexDirection: "column" }}>
 
-      {/* Header */}
       <div style={{ background: `linear-gradient(135deg, ${C.deep}, #2e2b3a)`, borderBottom: `1px solid ${C.border}`, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div>
           <div style={{ fontSize: 18, fontWeight: "bold", color: C.purple }}>💜 Mi Coach</div>
@@ -267,7 +283,6 @@ export default function App() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div style={{ display: "flex", background: C.deep, borderBottom: `1px solid ${C.border}` }}>
         {[["dashboard","📊","Dashboard"],["progreso","📈","Progreso"],["rutina","🏋️","Rutina"],["chat","💬","Coach"]].map(([id,icon,label]) => (
           <button key={id} onClick={() => setTab(id)} style={{ flex: 1, padding: "10px 4px", border: "none", cursor: "pointer", background: tab===id ? C.surface : "transparent", color: tab===id ? C.purple : C.muted, fontSize: 11, fontFamily: F, borderBottom: tab===id ? `2px solid ${C.purple}` : "2px solid transparent" }}>
@@ -278,10 +293,8 @@ export default function App() {
 
       <div style={{ flex: 1, overflow: "auto", paddingBottom: 20 }}>
 
-        {/* DASHBOARD */}
         {tab === "dashboard" && <div style={{ padding: 16 }}>
 
-          {/* Phase card */}
           <div style={{ background: `linear-gradient(135deg, ${C.deep}, #322f40)`, borderRadius: 14, padding: 16, border: `1px solid ${C.purpleBorder}`, marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
               <div>
@@ -303,7 +316,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Stats */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
             {[
               { l: "Sesiones totales", v: workouts.length, i: "🔥", c: "#e8a87c" },
@@ -319,32 +331,26 @@ export default function App() {
             ))}
           </div>
 
-          {/* WATER */}
           {card(<>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <div style={{ fontSize: 14, fontWeight: "bold", color: C.purple }}>💧 Agua de hoy</div>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={{ fontSize: 13, fontWeight: "bold", color: waterColor }}>{(todayWater/1000).toFixed(1)}L</span>
                 <span style={{ fontSize: 11, color: C.muted }}>/ 2.5L</span>
-                <button onClick={resetWater} style={{ background: "transparent", border: "none", color: C.muted, fontSize: 11, cursor: "pointer", fontFamily: F }}>↺</button>
+                <button onClick={resetWater} style={{ background: "transparent", border: "none", color: C.muted, fontSize: 13, cursor: "pointer" }}>↺</button>
               </div>
             </div>
-            {/* Progress bar */}
             <div style={{ background: C.bg, borderRadius: 8, height: 12, overflow: "hidden", marginBottom: 12 }}>
               <div style={{ width: `${waterPct}%`, height: "100%", background: `linear-gradient(90deg, #89b4e8, ${waterColor})`, borderRadius: 8, transition: "width 0.3s" }} />
             </div>
-            {/* Quick add buttons */}
             <div style={{ display: "flex", gap: 8 }}>
               {[150, 250, 350, 500].map(ml => (
-                <button key={ml} onClick={() => addWater(ml)} style={{ flex: 1, background: todayWater >= WATER_GOAL ? C.border : C.purpleDark, border: `1px solid ${C.purpleBorder}`, borderRadius: 8, color: todayWater >= WATER_GOAL ? C.muted : C.purple, padding: "8px 4px", fontSize: 11, cursor: todayWater >= WATER_GOAL ? "default" : "pointer", fontFamily: F }}>
-                  +{ml}ml
-                </button>
+                <button key={ml} onClick={() => addWater(ml)} style={{ flex: 1, background: todayWater >= WATER_GOAL ? C.border : C.purpleDark, border: `1px solid ${C.purpleBorder}`, borderRadius: 8, color: todayWater >= WATER_GOAL ? C.muted : C.purple, padding: "8px 4px", fontSize: 11, cursor: todayWater >= WATER_GOAL ? "default" : "pointer", fontFamily: F }}>+{ml}ml</button>
               ))}
             </div>
             {todayWater >= WATER_GOAL && <div style={{ textAlign: "center", fontSize: 12, color: "#88c9a1", marginTop: 8 }}>¡Objetivo cumplido! 🎉</div>}
           </>)}
 
-          {/* Body weight */}
           {card(<>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <div style={{ fontSize: 14, fontWeight: "bold", color: C.purple }}>⚖️ Peso corporal</div>
@@ -359,14 +365,13 @@ export default function App() {
                     return <div key={i} style={{ flex: 1 }}><div style={{ width: "100%", background: i===arr.length-1 ? C.purple : C.purpleDark, borderRadius: "3px 3px 0 0", height: h }} /></div>;
                   })}
                 </div>
-                {/* Editable list */}
                 {bodyWeights.slice(-4).reverse().map((bw) => (
                   <div key={bw.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px solid ${C.border}` }}>
                     <div style={{ fontSize: 12, color: C.muted }}>{bw.date}</div>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ fontSize: 13, fontWeight: "bold", color: C.text }}>{bw.weight}kg</span>
-                      <button onClick={() => { setEditingWeight(bw); setNewBW(String(bw.weight)); setShowWeightModal(true); }} style={{ background: "transparent", border: "none", color: C.muted, fontSize: 13, cursor: "pointer" }}>✏️</button>
-                      <button onClick={() => deleteWeight(bw.id)} style={{ background: "transparent", border: "none", color: "#c97a7a", fontSize: 13, cursor: "pointer" }}>🗑️</button>
+                      <button onClick={() => { setEditingWeight(bw); setNewBW(String(bw.weight)); setShowWeightModal(true); }} style={{ background: "transparent", border: "none", color: C.muted, fontSize: 14, cursor: "pointer" }}>✏️</button>
+                      <button onClick={() => deleteWeight(bw.id)} style={{ background: "transparent", border: "none", color: "#c97a7a", fontSize: 14, cursor: "pointer" }}>🗑️</button>
                     </div>
                   </div>
                 ))}
@@ -374,31 +379,35 @@ export default function App() {
             )}
           </>)}
 
-          {/* Sessions */}
           {card(<>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <div style={{ fontSize: 14, fontWeight: "bold", color: C.purple }}>🗓️ Últimas sesiones</div>
-              <button onClick={() => setShowLogModal(true)} style={{ background: C.purple, border: "none", borderRadius: 8, color: C.deep, padding: "5px 12px", fontSize: 11, cursor: "pointer", fontFamily: F, fontWeight: "bold" }}>+ Registrar</button>
+              <button onClick={() => { setEditingWorkout(null); setLogDay(0); setLogNotes(""); setLogExW({}); setLogBodyW(""); setLogCardioMin(""); setLogAbsSets({}); setLogAbsReps({}); setShowLogModal(true); }} style={{ background: C.purple, border: "none", borderRadius: 8, color: C.deep, padding: "5px 12px", fontSize: 11, cursor: "pointer", fontFamily: F, fontWeight: "bold" }}>+ Registrar</button>
             </div>
             {workouts.length === 0 ? <div style={{ color: C.muted, fontSize: 13, textAlign: "center", padding: "10px 0" }}>¡Registrá tu primera sesión! 💪</div>
               : workouts.slice(0,5).map((w, i) => (
-                <div key={w.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: i<Math.min(workouts.length,5)-1 ? `1px solid ${C.border}` : "none" }}>
-                  <div>
-                    <div style={{ fontSize: 13, color: C.text, fontWeight: "bold" }}>{w.day}</div>
-                    <div style={{ fontSize: 11, color: C.muted }}>{w.subtitle}</div>
+                <div key={w.id} style={{ padding: "8px 0", borderBottom: i<Math.min(workouts.length,5)-1 ? `1px solid ${C.border}` : "none" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontSize: 13, color: C.text, fontWeight: "bold" }}>{w.day}</div>
+                      <div style={{ fontSize: 11, color: C.muted }}>{w.subtitle}</div>
+                      {w.notes && <div style={{ fontSize: 11, color: C.muted, fontStyle: "italic", marginTop: 2 }}>{w.notes}</div>}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 11, color: C.purple }}>{w.date}</span>
+                      <button onClick={() => openEditWorkout(w)} style={{ background: "transparent", border: "none", color: C.muted, fontSize: 14, cursor: "pointer" }}>✏️</button>
+                      <button onClick={() => { if(window.confirm("¿Eliminás esta sesión?")) deleteWorkout(w.id); }} style={{ background: "transparent", border: "none", color: "#c97a7a", fontSize: 14, cursor: "pointer" }}>🗑️</button>
+                    </div>
                   </div>
-                  <div style={{ fontSize: 11, color: C.purple }}>{w.date}</div>
                 </div>
               ))}
           </>)}
         </div>}
 
-        {/* PROGRESO */}
         {tab === "progreso" && <div style={{ padding: 16 }}>
           <div style={{ fontSize: 14, fontWeight: "bold", color: C.purple, marginBottom: 4 }}>📈 Progreso por ejercicio</div>
           <div style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>Tocá para ver el historial.</div>
 
-          {/* Abs progress */}
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 11, color: C.muted, fontWeight: "bold", marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>💪 Abdominales</div>
             {ROUTINE.abs.map(ab => {
@@ -433,11 +442,9 @@ export default function App() {
             })}
           </div>
 
-          {/* Exercise progress by day */}
           {ROUTINE.days.map((day, di) => (
             <div key={di} style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 11, color: C.muted, fontWeight: "bold", marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>{day.label} · {day.subtitle}</div>
-
               {day.exercises.map(ex => {
                 const logs = exLogs[ex.id] || [];
                 const lastW = logs.length ? logs[logs.length-1].weight : null;
@@ -482,7 +489,6 @@ export default function App() {
                 );
               })}
 
-              {/* Cardio progress */}
               {(() => {
                 const cid = `cardio_d${di}`;
                 const logs = exLogs[cid] || [];
@@ -518,7 +524,6 @@ export default function App() {
           ))}
         </div>}
 
-        {/* RUTINA */}
         {tab === "rutina" && <div style={{ padding: 16 }}>
           {card(<>
             <div style={{ fontSize: 14, fontWeight: "bold", color: C.purple, marginBottom: 10 }}>💪 Bloque de Abs — Inicio de cada sesión</div>
@@ -531,11 +536,10 @@ export default function App() {
                     <button onClick={() => setShowTip(showTip === ex.id ? null : ex.id)} style={{ background: C.purpleDark, border: "none", borderRadius: 12, color: C.purple, fontSize: 10, padding: "2px 8px", cursor: "pointer", fontFamily: F }}>?</button>
                   </div>
                 </div>
-                {showTip === ex.id && <div style={{ background: C.bg, borderRadius: 8, padding: 10, marginBottom: 4, fontSize: 12, color: C.muted, lineHeight: 1.6 }}>{ex.tip}</div>}
+                {showTip === ex.id && <div style={{ background: C.bg, borderRadius: 8, padding: 10, margin: "4px 0", fontSize: 12, color: C.muted, lineHeight: 1.6 }}>{ex.tip}</div>}
               </div>
             ))}
           </>, { border: `1px solid ${C.purpleBorder}` })}
-
           {ROUTINE.days.map((day, di) => card(
             <>
               <div style={{ marginBottom: 10 }}>
@@ -556,7 +560,7 @@ export default function App() {
                       <div style={{ fontSize: 11, color: C.purple, background: C.purpleDark, borderRadius: 6, padding: "2px 6px", textAlign: "center", minWidth: 54 }}>{ex.weight}</div>
                       <button onClick={() => setShowTip(showTip === ex.id ? null : ex.id)} style={{ background: C.purpleDark, border: "none", borderRadius: 12, color: C.purple, fontSize: 10, padding: "2px 8px", cursor: "pointer", fontFamily: F }}>?</button>
                     </div>
-                    {showTip === ex.id && <div style={{ background: C.bg, borderRadius: 8, padding: 10, marginBottom: 4, fontSize: 12, color: C.muted, lineHeight: 1.6 }}>{EXERCISE_TIPS[ex.id]}</div>}
+                    {showTip === ex.id && <div style={{ background: C.bg, borderRadius: 8, padding: 10, margin: "4px 0", fontSize: 12, color: C.muted, lineHeight: 1.6 }}>{EXERCISE_TIPS[ex.id]}</div>}
                   </div>
                 );
               })}
@@ -568,7 +572,6 @@ export default function App() {
           ))}
         </div>}
 
-        {/* CHAT */}
         {tab === "chat" && <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 160px)" }}>
           <div style={{ flex: 1, overflow: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
             {messages.map((m, i) => (
@@ -600,7 +603,6 @@ export default function App() {
         </div>}
       </div>
 
-      {/* Start modal */}
       {showStartModal && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 20 }}>
         <div style={{ background: C.surface, borderRadius: 20, padding: 24, border: `1px solid ${C.purpleBorder}`, maxWidth: 320, width: "100%", textAlign: "center" }}>
           <div style={{ fontSize: 48, marginBottom: 12 }}>💜</div>
@@ -610,10 +612,9 @@ export default function App() {
         </div>
       </div>}
 
-      {/* Log workout modal */}
-      {showLogModal && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", zIndex: 100 }} onClick={() => setShowLogModal(false)}>
+      {showLogModal && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", zIndex: 100 }} onClick={() => { setShowLogModal(false); setEditingWorkout(null); }}>
         <div style={{ background: C.surface, borderRadius: "20px 20px 0 0", padding: 20, width: "100%", border: `1px solid ${C.border}`, maxHeight: "90vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
-          <div style={{ fontSize: 16, fontWeight: "bold", color: C.purple, marginBottom: 14 }}>🏋️ Registrar sesión</div>
+          <div style={{ fontSize: 16, fontWeight: "bold", color: C.purple, marginBottom: 14 }}>{editingWorkout ? "✏️ Editar sesión" : "🏋️ Registrar sesión"}</div>
 
           <div style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>¿Qué día entrenaste?</div>
@@ -622,7 +623,6 @@ export default function App() {
             </div>
           </div>
 
-          {/* Abs */}
           <div style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 12, color: C.muted, marginBottom: 8 }}>💪 Abdominales</div>
             {ROUTINE.abs.map(ab => (
@@ -644,7 +644,6 @@ export default function App() {
             ))}
           </div>
 
-          {/* Exercise weights */}
           <div style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 12, color: C.muted, marginBottom: 8 }}>🏋️ Pesos por ejercicio</div>
             {ROUTINE.days[logDay].exercises.map(ex => (
@@ -656,32 +655,30 @@ export default function App() {
             ))}
           </div>
 
-          {/* Cardio */}
           <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>🏃 Elíptico — ¿cuántos minutos hiciste? (objetivo: {ROUTINE.days[logDay].cardioMin} min)</div>
+            <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>🏃 Elíptico — minutos hechos (objetivo: {ROUTINE.days[logDay].cardioMin} min)</div>
             <input type="number" value={logCardioMin} onChange={e => setLogCardioMin(e.target.value)} placeholder={String(ROUTINE.days[logDay].cardioMin)}
               style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 12px", color: C.text, fontSize: 13, fontFamily: F, outline: "none", boxSizing: "border-box" }} />
           </div>
 
-          {/* Body weight */}
           <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>⚖️ Peso corporal (kg) — opcional</div>
             <input type="number" value={logBodyW} onChange={e => setLogBodyW(e.target.value)} placeholder="Ej: 68.5"
               style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 12px", color: C.text, fontSize: 13, fontFamily: F, outline: "none", boxSizing: "border-box" }} />
           </div>
 
-          {/* Notes */}
           <div style={{ marginBottom: 16 }}>
             <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>📝 Notas — opcional</div>
             <textarea value={logNotes} onChange={e => setLogNotes(e.target.value)} placeholder="¿Cómo te sentiste?" rows={2}
               style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 12px", color: C.text, fontSize: 13, fontFamily: F, outline: "none", resize: "none", boxSizing: "border-box" }} />
           </div>
 
-          <button onClick={logWorkout} style={{ width: "100%", background: C.purple, border: "none", borderRadius: 12, padding: 14, color: C.deep, fontSize: 14, fontWeight: "bold", cursor: "pointer", fontFamily: F }}>Guardar y compartir con Coach 💜</button>
+          <button onClick={logWorkout} style={{ width: "100%", background: C.purple, border: "none", borderRadius: 12, padding: 14, color: C.deep, fontSize: 14, fontWeight: "bold", cursor: "pointer", fontFamily: F }}>
+            {editingWorkout ? "Guardar cambios 💜" : "Guardar y compartir con Coach 💜"}
+          </button>
         </div>
       </div>}
 
-      {/* Weight modal */}
       {showWeightModal && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", zIndex: 100 }} onClick={() => { setShowWeightModal(false); setEditingWeight(null); setNewBW(""); }}>
         <div style={{ background: C.surface, borderRadius: "20px 20px 0 0", padding: 20, width: "100%", border: `1px solid ${C.border}` }} onClick={e => e.stopPropagation()}>
           <div style={{ fontSize: 16, fontWeight: "bold", color: C.purple, marginBottom: 16 }}>{editingWeight ? "✏️ Editar peso" : "⚖️ Registrar peso corporal"}</div>
@@ -703,3 +700,6 @@ export default function App() {
     </div>
   );
 }
+
+
+Commit changes → Commit changes y listo. 💜​​​​​​​​​​​​​​​​
