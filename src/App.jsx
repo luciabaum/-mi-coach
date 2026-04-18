@@ -1,0 +1,453 @@
+import { useState, useEffect, useRef } from "react";
+
+const SYSTEM_PROMPT = `Sos una entrenadora personal experta y empática llamada "Coach". Conocés muy bien a tu clienta y tenés toda su información:
+
+PERFIL:
+- Mujer, 30-45 años
+- Nivel: Intermedia (1-2 años de experiencia previa, parada hace más de 1 año)
+- Objetivo: Perder grasa, tonificar, verse y sentirse mejor
+- Zona de foco: Piernas y glúteos (aunque quiere trabajar todo el cuerpo)
+- Sin lesiones ni limitaciones físicas
+- Gimnasio completo disponible
+- 3 días/semana, +60 min por sesión
+- Cardio: elíptico (lo tolera)
+- Alimentación: regular, con altibajos
+- Sueño: bien, pero estrés alto
+- Dejó el gimnasio por falta de motivación
+
+RUTINA ACTUAL — FASE 1 (Semanas 1-4, Reintroducción):
+BLOQUE DE ABS: Crunch básico 3x20, Crunch bicicleta 3x15, Plancha frontal 3x30seg, Dead bug 3x10/lado
+DÍA 1 — Tren inferior: Sentadilla con barra 3x15 20-30kg, Hip thrust 3x12 20-40kg, P.muerto rumano 3x12 20-30kg, Abducción máquina 3x15 20-30kg, Elíptico 15min
+DÍA 2 — Tren superior: Press banca mancuernas 3x12 8-12kg, Remo polea 3x12 25-35kg, Press militar 3x12 6-10kg, Jalón al pecho 3x12 25-35kg, Curl bíceps 3x12 6-10kg, Elíptico 15min
+DÍA 3 — Cuerpo completo: Goblet squat 3x12 12-16kg, Zancadas 3x10/pierna 8-10kg, Remo mancuernas 3x12 10-14kg, Press hombros 3x12 15-25kg, Extensión tríceps 3x12 10-15kg, P.muerto mancuernas 3x12 12-16kg, Elíptico 20min
+
+Tu rol: Seguimiento, ajustá rutinas, motivá sin exagerar, respondé en español cercano y directo, analizá registros, recordá progresar pesos, considerá el estrés. Máx 4-5 oraciones.`;
+
+const INITIAL_MESSAGE = { role: "assistant", content: "¡Hola! 💜 Soy tu Coach. Ya tengo toda tu info cargada. ¿Cómo arrancamos hoy?" };
+
+const ROUTINE = {
+  abs: [
+    { name: "Crunch básico", sets: 3, reps: "20" },
+    { name: "Crunch bicicleta", sets: 3, reps: "15" },
+    { name: "Plancha frontal", sets: 3, reps: "30 seg" },
+    { name: "Dead bug", sets: 3, reps: "10/lado" },
+  ],
+  days: [
+    { label: "Día 1", subtitle: "Tren inferior · Glúteos", exercises: [
+      { id: "squat", name: "Sentadilla con barra", sets: 3, reps: 15, weight: "20-30kg" },
+      { id: "hipthrust", name: "Hip thrust", sets: 3, reps: 12, weight: "20-40kg" },
+      { id: "rdl", name: "P. muerto rumano", sets: 3, reps: 12, weight: "20-30kg" },
+      { id: "abduction", name: "Abducción máquina", sets: 3, reps: 15, weight: "20-30kg" },
+      { id: "e1", name: "Elíptico", sets: 1, reps: "15min", weight: "—" },
+    ]},
+    { label: "Día 2", subtitle: "Tren superior · Core", exercises: [
+      { id: "bench", name: "Press banca mancuernas", sets: 3, reps: 12, weight: "8-12kg c/u" },
+      { id: "cablerow", name: "Remo polea sentada", sets: 3, reps: 12, weight: "25-35kg" },
+      { id: "ohpress", name: "Press militar", sets: 3, reps: 12, weight: "6-10kg c/u" },
+      { id: "latpull", name: "Jalón al pecho", sets: 3, reps: 12, weight: "25-35kg" },
+      { id: "curl", name: "Curl bíceps", sets: 3, reps: 12, weight: "6-10kg c/u" },
+      { id: "e2", name: "Elíptico", sets: 1, reps: "15min", weight: "—" },
+    ]},
+    { label: "Día 3", subtitle: "Cuerpo completo", exercises: [
+      { id: "goblet", name: "Goblet squat", sets: 3, reps: 12, weight: "12-16kg" },
+      { id: "lunge", name: "Zancadas caminando", sets: 3, reps: "10/pierna", weight: "8-10kg c/u" },
+      { id: "dbrow", name: "Remo mancuernas", sets: 3, reps: 12, weight: "10-14kg c/u" },
+      { id: "shpress", name: "Press hombros máquina", sets: 3, reps: 12, weight: "15-25kg" },
+      { id: "triceps", name: "Extensión tríceps", sets: 3, reps: 12, weight: "10-15kg" },
+      { id: "ddl", name: "P. muerto mancuernas", sets: 3, reps: 12, weight: "12-16kg c/u" },
+      { id: "e3", name: "Elíptico", sets: 1, reps: "20min", weight: "—" },
+    ]},
+  ]
+};
+
+const PHASE_WEEKS = 4;
+const C = { bg: "#0e0e12", surface: "#16101f", border: "#2a1f40", purple: "#c084fc", purpleDark: "#2d1f4a", purpleBorder: "#4a2d7a", text: "#e2d4f8", muted: "#7a6a9a", deep: "#1a0a2e" };
+
+export default function App() {
+  const [tab, setTab] = useState("dashboard");
+  const [messages, setMessages] = useState([INITIAL_MESSAGE]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [workouts, setWorkouts] = useState([]);
+  const [bodyWeights, setBodyWeights] = useState([]);
+  const [exLogs, setExLogs] = useState({});
+  const [phaseStart, setPhaseStart] = useState(null);
+  const [showLogModal, setShowLogModal] = useState(false);
+  const [showWeightModal, setShowWeightModal] = useState(false);
+  const [showStartModal, setShowStartModal] = useState(false);
+  const [logDay, setLogDay] = useState(0);
+  const [logNotes, setLogNotes] = useState("");
+  const [logBodyW, setLogBodyW] = useState("");
+  const [logExW, setLogExW] = useState({});
+  const [newBW, setNewBW] = useState("");
+  const [openEx, setOpenEx] = useState(null);
+  const chatEndRef = useRef(null);
+
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+  useEffect(() => {
+    const w = localStorage.getItem("fc_workouts");
+    const bw = localStorage.getItem("fc_bodyweights");
+    const el = localStorage.getItem("fc_exlogs");
+    const ps = localStorage.getItem("fc_phasestart");
+    if (w) setWorkouts(JSON.parse(w));
+    if (bw) setBodyWeights(JSON.parse(bw));
+    if (el) setExLogs(JSON.parse(el));
+    if (ps) setPhaseStart(ps);
+    else setShowStartModal(true);
+  }, []);
+
+  const save = (key, val) => localStorage.setItem(key, typeof val === "string" ? val : JSON.stringify(val));
+
+  const startPhase = () => {
+    const today = new Date().toISOString().split("T")[0];
+    setPhaseStart(today); save("fc_phasestart", today); setShowStartModal(false);
+  };
+
+  const getPhaseInfo = () => {
+    if (!phaseStart) return { week: 1, daysLeft: PHASE_WEEKS * 7, pct: 0 };
+    const elapsed = Math.floor((Date.now() - new Date(phaseStart)) / 86400000);
+    const total = PHASE_WEEKS * 7;
+    return { week: Math.min(PHASE_WEEKS, Math.floor(elapsed / 7) + 1), daysLeft: Math.max(0, total - elapsed), pct: Math.min(100, (elapsed / total) * 100) };
+  };
+
+  const sendMessage = async (text) => {
+    if (!text.trim()) return;
+    const newMsgs = [...messages, { role: "user", content: text }];
+    setMessages(newMsgs); setInput(""); setLoading(true);
+    try {
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1000, system: SYSTEM_PROMPT, messages: newMsgs })
+      });
+      const data = await res.json();
+      setMessages([...newMsgs, { role: "assistant", content: data.content?.[0]?.text || "Error, intentá de nuevo." }]);
+    } catch { setMessages([...newMsgs, { role: "assistant", content: "Hubo un error 💜" }]); }
+    setLoading(false);
+  };
+
+  const logWorkout = () => {
+    const day = ROUTINE.days[logDay];
+    const date = new Date().toLocaleDateString("es-AR");
+    const newEl = { ...exLogs };
+    day.exercises.forEach(ex => { if (logExW[ex.id]) { if (!newEl[ex.id]) newEl[ex.id] = []; newEl[ex.id].push({ date, weight: logExW[ex.id] }); } });
+    setExLogs(newEl); save("fc_exlogs", newEl);
+    if (logBodyW) { const newBws = [...bodyWeights, { date, weight: parseFloat(logBodyW), id: Date.now() }]; setBodyWeights(newBws); save("fc_bodyweights", newBws); }
+    const w = { id: Date.now(), date, day: day.label, subtitle: day.subtitle, notes: logNotes };
+    const newWs = [w, ...workouts]; setWorkouts(newWs); save("fc_workouts", newWs);
+    const summary = day.exercises.filter(e => logExW[e.id]).map(e => `${e.name}: ${logExW[e.id]}kg`).join(", ");
+    const msg = `Registré: ${day.label} (${day.subtitle}). ${logBodyW ? `Peso corporal: ${logBodyW}kg.` : ""} ${summary ? `Pesos: ${summary}.` : ""} ${logNotes || ""}`;
+    setShowLogModal(false); setLogNotes(""); setLogBodyW(""); setLogExW({});
+    sendMessage(msg); setTab("chat");
+  };
+
+  const addBodyWeight = () => {
+    if (!newBW) return;
+    const bw = { date: new Date().toLocaleDateString("es-AR"), weight: parseFloat(newBW), id: Date.now() };
+    const newBws = [...bodyWeights, bw]; setBodyWeights(newBws); save("fc_bodyweights", newBws);
+    setShowWeightModal(false); setNewBW("");
+  };
+
+  const getExProg = (id) => {
+    const logs = exLogs[id] || [];
+    if (logs.length < 2) return null;
+    return { diff: (parseFloat(logs[logs.length-1].weight) - parseFloat(logs[0].weight)).toFixed(1), last: logs[logs.length-1].weight };
+  };
+
+  const pi = getPhaseInfo();
+  const currentBW = bodyWeights.length ? bodyWeights[bodyWeights.length-1].weight : null;
+  const bwDiff = bodyWeights.length > 1 ? (currentBW - bodyWeights[0].weight).toFixed(1) : null;
+  const weekWos = workouts.filter(w => (Date.now() - w.id) < 7*86400000).length;
+
+  const card = (children, extra = {}) => (
+    <div style={{ background: C.surface, borderRadius: 12, padding: 14, border: `1px solid ${C.border}`, marginBottom: 14, ...extra }}>{children}</div>
+  );
+
+  return (
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "Georgia, serif", display: "flex", flexDirection: "column" }}>
+
+      {/* Header */}
+      <div style={{ background: `linear-gradient(135deg, ${C.deep}, #16082a)`, borderBottom: `1px solid #2d1f4a`, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div>
+          <div style={{ fontSize: 18, fontWeight: "bold", color: C.purple }}>💜 Mi Coach</div>
+          <div style={{ fontSize: 10, color: "#9370b8", letterSpacing: 2, textTransform: "uppercase" }}>Fase 1 · Semana {pi.week}/{PHASE_WEEKS}</div>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ background: C.purpleDark, borderRadius: 20, padding: "4px 12px", border: `1px solid ${C.purpleBorder}`, marginBottom: 4 }}>
+            <span style={{ fontSize: 14, fontWeight: "bold", color: pi.daysLeft <= 7 ? "#f97316" : C.purple }}>{pi.daysLeft}d</span>
+            <span style={{ fontSize: 10, color: C.muted }}> para Fase 2</span>
+          </div>
+          <div style={{ width: 100, height: 4, background: "#1e1630", borderRadius: 2, overflow: "hidden" }}>
+            <div style={{ width: `${pi.pct}%`, height: "100%", background: "linear-gradient(90deg,#7b3f8c,#c084fc)", borderRadius: 2 }} />
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: "flex", background: "#13101e", borderBottom: "1px solid #1e1630" }}>
+        {[["dashboard","📊","Dashboard"],["progreso","📈","Progreso"],["rutina","🏋️","Rutina"],["chat","💬","Coach"]].map(([id,icon,label]) => (
+          <button key={id} onClick={() => setTab(id)} style={{ flex: 1, padding: "10px 4px", border: "none", cursor: "pointer", background: tab===id ? C.deep : "transparent", color: tab===id ? C.purple : C.muted, fontSize: 11, fontFamily: "Georgia", borderBottom: tab===id ? `2px solid ${C.purple}` : "2px solid transparent" }}>
+            <div style={{ fontSize: 16 }}>{icon}</div><div style={{ marginTop: 1 }}>{label}</div>
+          </button>
+        ))}
+      </div>
+
+      <div style={{ flex: 1, overflow: "auto", paddingBottom: 20 }}>
+
+        {tab === "dashboard" && <div style={{ padding: 16 }}>
+          <div style={{ background: `linear-gradient(135deg,${C.deep},#200d3a)`, borderRadius: 14, padding: 16, border: `1px solid ${C.purpleBorder}`, marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+              <div>
+                <div style={{ fontSize: 11, color: "#9370b8", marginBottom: 2 }}>🌱 Fase 1 — Reintroducción</div>
+                <div style={{ fontSize: 20, fontWeight: "bold", color: C.purple }}>{pi.daysLeft === 0 ? "¡Lista para Fase 2! 🎉" : `${pi.daysLeft} días restantes`}</div>
+              </div>
+              <div style={{ background: C.purpleDark, borderRadius: 10, padding: "6px 12px", textAlign: "center" }}>
+                <div style={{ fontSize: 20, fontWeight: "bold", color: C.text }}>S{pi.week}</div>
+                <div style={{ fontSize: 9, color: C.muted }}>de {PHASE_WEEKS}</div>
+              </div>
+            </div>
+            <div style={{ background: C.bg, borderRadius: 6, height: 8, overflow: "hidden" }}>
+              <div style={{ width: `${pi.pct}%`, height: "100%", background: "linear-gradient(90deg,#7b3f8c,#c084fc)", borderRadius: 6 }} />
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+              <span style={{ fontSize: 10, color: "#5a4a7a" }}>Inicio</span>
+              <span style={{ fontSize: 10, color: C.purple }}>{Math.round(pi.pct)}% completada</span>
+              <span style={{ fontSize: 10, color: "#5a4a7a" }}>Fase 2</span>
+            </div>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
+            {[
+              { l: "Sesiones totales", v: workouts.length, i: "🔥", c: "#f97316" },
+              { l: "Esta semana", v: `${weekWos}/3`, i: "📅", c: "#34d399" },
+              { l: "Peso actual", v: currentBW ? `${currentBW}kg` : "—", i: "⚖️", c: "#60a5fa" },
+              { l: "Cambio total", v: bwDiff ? `${bwDiff > 0 ? "+" : ""}${bwDiff}kg` : "—", i: bwDiff < 0 ? "📉" : "📈", c: bwDiff < 0 ? "#34d399" : "#f97316" },
+            ].map((s, i) => (
+              <div key={i} style={{ background: C.surface, borderRadius: 12, padding: 14, border: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: 20 }}>{s.i}</div>
+                <div style={{ fontSize: 20, fontWeight: "bold", color: s.c, marginTop: 4 }}>{s.v}</div>
+                <div style={{ fontSize: 11, color: C.muted, marginTop: 2 }}>{s.l}</div>
+              </div>
+            ))}
+          </div>
+
+          {card(<>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <div style={{ fontSize: 14, fontWeight: "bold", color: C.purple }}>⚖️ Peso corporal</div>
+              <button onClick={() => setShowWeightModal(true)} style={{ background: C.purpleDark, border: `1px solid ${C.purpleBorder}`, borderRadius: 8, color: C.purple, padding: "4px 10px", fontSize: 11, cursor: "pointer", fontFamily: "Georgia" }}>+ Registrar</button>
+            </div>
+            {bodyWeights.length === 0 ? <div style={{ color: "#5a4a7a", fontSize: 13, textAlign: "center", padding: "10px 0" }}>Todavía no registraste tu peso 🌱</div> : (
+              <div>
+                <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 50, marginBottom: 6 }}>
+                  {bodyWeights.slice(-12).map((bw, i, arr) => {
+                    const ws = arr.map(b => b.weight), mn = Math.min(...ws)-1, mx = Math.max(...ws)+1;
+                    const h = Math.max(6, ((bw.weight-mn)/(mx-mn))*44);
+                    return <div key={i} style={{ flex: 1 }}><div style={{ width: "100%", background: i===arr.length-1 ? C.purple : C.purpleDark, borderRadius: "3px 3px 0 0", height: h }} /></div>;
+                  })}
+                </div>
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: C.muted }}>
+                  <span>{bodyWeights[Math.max(0,bodyWeights.length-12)]?.date}</span>
+                  <span style={{ color: C.purple, fontWeight: "bold" }}>{currentBW}kg hoy</span>
+                </div>
+              </div>
+            )}
+          </>)}
+
+          {card(<>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <div style={{ fontSize: 14, fontWeight: "bold", color: C.purple }}>🗓️ Últimas sesiones</div>
+              <button onClick={() => setShowLogModal(true)} style={{ background: C.purple, border: "none", borderRadius: 8, color: "#0e0e12", padding: "5px 12px", fontSize: 11, cursor: "pointer", fontFamily: "Georgia", fontWeight: "bold" }}>+ Registrar</button>
+            </div>
+            {workouts.length === 0 ? <div style={{ color: "#5a4a7a", fontSize: 13, textAlign: "center", padding: "10px 0" }}>¡Registrá tu primera sesión! 💪</div>
+              : workouts.slice(0,5).map((w, i) => (
+                <div key={w.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: i<Math.min(workouts.length,5)-1 ? "1px solid #1e1630" : "none" }}>
+                  <div>
+                    <div style={{ fontSize: 13, color: C.text, fontWeight: "bold" }}>{w.day}</div>
+                    <div style={{ fontSize: 11, color: C.muted }}>{w.subtitle}</div>
+                  </div>
+                  <div style={{ fontSize: 11, color: C.purple }}>{w.date}</div>
+                </div>
+              ))}
+          </>)}
+        </div>}
+
+        {tab === "progreso" && <div style={{ padding: 16 }}>
+          <div style={{ fontSize: 14, fontWeight: "bold", color: C.purple, marginBottom: 4 }}>📈 Progreso por ejercicio</div>
+          <div style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>Tocá un ejercicio para ver tu historial.</div>
+          {ROUTINE.days.map((day, di) => (
+            <div key={di} style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, color: "#9370b8", fontWeight: "bold", marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>{day.label} · {day.subtitle}</div>
+              {day.exercises.filter(e => !e.id.startsWith("e")).map(ex => {
+                const logs = exLogs[ex.id] || [];
+                const lastW = logs.length ? logs[logs.length-1].weight : null;
+                const prog = getExProg(ex.id);
+                const isOpen = openEx === ex.id;
+                return (
+                  <div key={ex.id} onClick={() => setOpenEx(isOpen ? null : ex.id)}
+                    style={{ background: C.surface, borderRadius: 10, padding: 12, border: `1px solid ${isOpen ? C.purple : C.border}`, marginBottom: 8, cursor: "pointer" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <div>
+                        <div style={{ fontSize: 13, color: C.text, fontWeight: "bold" }}>{ex.name}</div>
+                        <div style={{ fontSize: 11, color: C.muted }}>{ex.sets}x{ex.reps} · Ref: {ex.weight}</div>
+                      </div>
+                      <div style={{ textAlign: "right" }}>
+                        {lastW ? <>
+                          <div style={{ fontSize: 16, fontWeight: "bold", color: C.purple }}>{lastW}kg</div>
+                          {prog && <div style={{ fontSize: 11, color: prog.diff > 0 ? "#34d399" : "#f97316" }}>{prog.diff > 0 ? "+" : ""}{prog.diff}kg</div>}
+                        </> : <div style={{ fontSize: 11, color: "#4a3a6a" }}>Sin registros</div>}
+                      </div>
+                    </div>
+                    {isOpen && <div style={{ marginTop: 12, paddingTop: 10, borderTop: `1px solid ${C.border}` }}>
+                      {logs.length > 0 ? <>
+                        <div style={{ display: "flex", alignItems: "flex-end", gap: 4, height: 44, marginBottom: 8 }}>
+                          {logs.slice(-8).map((l, li, arr) => {
+                            const ws = arr.map(x => parseFloat(x.weight)), mn = Math.min(...ws)-1, mx = Math.max(...ws)+1;
+                            const h = Math.max(4, ((parseFloat(l.weight)-mn)/(mx-mn))*36);
+                            return <div key={li} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                              <div style={{ fontSize: 8, color: C.muted }}>{l.weight}</div>
+                              <div style={{ width: "100%", background: li===arr.length-1 ? C.purple : C.purpleDark, borderRadius: "2px 2px 0 0", height: h }} />
+                            </div>;
+                          })}
+                        </div>
+                        {logs.slice(-5).reverse().map((l, li) => (
+                          <div key={li} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, padding: "3px 0" }}>
+                            <span style={{ color: C.muted }}>{l.date}</span>
+                            <span style={{ color: C.text, fontWeight: li===0 ? "bold" : "normal" }}>{l.weight}kg</span>
+                          </div>
+                        ))}
+                      </> : <div style={{ fontSize: 12, color: "#5a4a7a", textAlign: "center" }}>Registrá pesos en tu próxima sesión 💜</div>}
+                    </div>}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>}
+
+        {tab === "rutina" && <div style={{ padding: 16 }}>
+          {card(<>
+            <div style={{ fontSize: 14, fontWeight: "bold", color: C.purple, marginBottom: 10 }}>💪 Bloque de Abs — Inicio de cada sesión</div>
+            {ROUTINE.abs.map((ex, i) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: i<ROUTINE.abs.length-1 ? "1px solid #1e1630" : "none" }}>
+                <div style={{ fontSize: 13 }}>{ex.name}</div>
+                <div style={{ fontSize: 12, color: "#9370b8" }}>{ex.sets}x{ex.reps}</div>
+              </div>
+            ))}
+          </>, { border: `1px solid ${C.purpleBorder}` })}
+          {ROUTINE.days.map((day, di) => card(
+            <>
+              <div style={{ marginBottom: 10 }}>
+                <span style={{ fontSize: 14, fontWeight: "bold", color: C.purple }}>{day.label}</span>
+                <span style={{ fontSize: 12, color: C.muted, marginLeft: 8 }}>· {day.subtitle}</span>
+              </div>
+              {day.exercises.map((ex, i) => {
+                const logs = exLogs[ex.id] || [];
+                const lastW = logs.length ? logs[logs.length-1].weight : null;
+                return (
+                  <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: 8, padding: "7px 0", borderBottom: i<day.exercises.length-1 ? "1px solid #1e1630" : "none", alignItems: "center" }}>
+                    <div>
+                      <div style={{ fontSize: 13 }}>{ex.name}</div>
+                      {lastW && <div style={{ fontSize: 10, color: "#34d399" }}>Último: {lastW}kg</div>}
+                    </div>
+                    <div style={{ fontSize: 11, color: "#9370b8" }}>{ex.sets}x{ex.reps}</div>
+                    <div style={{ fontSize: 11, color: C.purple, background: C.purpleDark, borderRadius: 6, padding: "2px 6px", textAlign: "center", minWidth: 58 }}>{ex.weight}</div>
+                  </div>
+                );
+              })}
+            </>, di
+          ))}
+        </div>}
+
+        {tab === "chat" && <div style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 160px)" }}>
+          <div style={{ flex: 1, overflow: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+            {messages.map((m, i) => (
+              <div key={i} style={{ display: "flex", justifyContent: m.role==="user" ? "flex-end" : "flex-start" }}>
+                {m.role==="assistant" && <div style={{ width: 28, height: 28, borderRadius: "50%", background: C.purpleDark, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, marginRight: 8, flexShrink: 0, alignSelf: "flex-end" }}>💜</div>}
+                <div style={{ maxWidth: "78%", padding: "10px 14px", borderRadius: m.role==="user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: m.role==="user" ? C.purple : "#1e1630", color: m.role==="user" ? "#0e0e12" : C.text, fontSize: 13, lineHeight: 1.55, border: m.role==="assistant" ? `1px solid ${C.purpleDark}` : "none" }}>
+                  {m.content}
+                </div>
+              </div>
+            ))}
+            {loading && <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ width: 28, height: 28, borderRadius: "50%", background: C.purpleDark, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>💜</div>
+              <div style={{ background: "#1e1630", border: `1px solid ${C.purpleDark}`, borderRadius: "18px 18px 18px 4px", padding: "10px 16px" }}>
+                <div style={{ display: "flex", gap: 4 }}>{[0,1,2].map(i => <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: C.purple, animation: `bounce 1.2s ${i*.2}s infinite` }} />)}</div>
+              </div>
+            </div>}
+            <div ref={chatEndRef} />
+          </div>
+          <div style={{ padding: "0 12px 8px", display: "flex", gap: 6, overflowX: "auto" }}>
+            {["¿Cómo progreso?","Ajustá mi rutina","Tips para hoy","Registrar sesión"].map((q,i) => (
+              <button key={i} onClick={() => q==="Registrar sesión" ? setShowLogModal(true) : sendMessage(q)} style={{ background: "#1e1630", border: `1px solid ${C.purpleDark}`, borderRadius: 16, color: C.purple, padding: "5px 12px", fontSize: 11, cursor: "pointer", whiteSpace: "nowrap", fontFamily: "Georgia" }}>{q}</button>
+            ))}
+          </div>
+          <div style={{ padding: "8px 12px 16px", display: "flex", gap: 8, background: C.bg, borderTop: "1px solid #1e1630" }}>
+            <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key==="Enter" && !e.shiftKey && sendMessage(input)} placeholder="Escribile a tu coach..."
+              style={{ flex: 1, background: C.surface, border: `1px solid ${C.purpleDark}`, borderRadius: 20, padding: "10px 16px", color: C.text, fontSize: 13, fontFamily: "Georgia", outline: "none" }} />
+            <button onClick={() => sendMessage(input)} disabled={loading || !input.trim()} style={{ background: input.trim() ? C.purple : C.purpleDark, border: "none", borderRadius: "50%", width: 40, height: 40, color: input.trim() ? "#0e0e12" : "#5a4a7a", cursor: input.trim() ? "pointer" : "default", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>➤</button>
+          </div>
+        </div>}
+      </div>
+
+      {showStartModal && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 20 }}>
+        <div style={{ background: C.surface, borderRadius: 20, padding: 24, border: `1px solid ${C.purpleBorder}`, maxWidth: 320, width: "100%", textAlign: "center" }}>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>💜</div>
+          <div style={{ fontSize: 18, fontWeight: "bold", color: C.purple, marginBottom: 8 }}>¡Bienvenida de vuelta!</div>
+          <div style={{ fontSize: 13, color: "#b09acc", lineHeight: 1.6, marginBottom: 20 }}>¿Arrancás la Fase 1 hoy? Vamos a contar las 4 semanas desde ahora.</div>
+          <button onClick={startPhase} style={{ width: "100%", background: C.purple, border: "none", borderRadius: 12, padding: 14, color: "#0e0e12", fontSize: 14, fontWeight: "bold", cursor: "pointer", fontFamily: "Georgia" }}>¡Arranco hoy! 🚀</button>
+        </div>
+      </div>}
+
+      {showLogModal && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 100 }} onClick={() => setShowLogModal(false)}>
+        <div style={{ background: C.surface, borderRadius: "20px 20px 0 0", padding: 20, width: "100%", border: `1px solid ${C.purpleDark}`, maxHeight: "88vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+          <div style={{ fontSize: 16, fontWeight: "bold", color: C.purple, marginBottom: 14 }}>🏋️ Registrar sesión</div>
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 12, color: "#9370b8", marginBottom: 6 }}>¿Qué día entrenaste?</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              {ROUTINE.days.map((d,i) => <button key={i} onClick={() => setLogDay(i)} style={{ flex: 1, padding: "8px 4px", borderRadius: 8, cursor: "pointer", fontFamily: "Georgia", background: logDay===i ? C.purple : C.purpleDark, border: logDay===i ? "none" : `1px solid ${C.purpleBorder}`, color: logDay===i ? "#0e0e12" : C.purple, fontSize: 12, fontWeight: "bold" }}>{d.label}</button>)}
+            </div>
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 12, color: "#9370b8", marginBottom: 8 }}>Pesos usados hoy</div>
+            {ROUTINE.days[logDay].exercises.filter(e => !e.id.startsWith("e")).map(ex => (
+              <div key={ex.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <div style={{ flex: 1, fontSize: 12, color: C.text }}>{ex.name}</div>
+                <input type="number" placeholder="kg" value={logExW[ex.id]||""} onChange={e => setLogExW({...logExW,[ex.id]:e.target.value})}
+                  style={{ width: 64, background: C.bg, border: `1px solid ${C.purpleDark}`, borderRadius: 8, padding: "6px 8px", color: C.text, fontSize: 13, fontFamily: "Georgia", outline: "none", textAlign: "center" }} />
+              </div>
+            ))}
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 12, color: "#9370b8", marginBottom: 6 }}>Peso corporal (kg) — opcional</div>
+            <input type="number" value={logBodyW} onChange={e => setLogBodyW(e.target.value)} placeholder="Ej: 68.5"
+              style={{ width: "100%", background: C.bg, border: `1px solid ${C.purpleDark}`, borderRadius: 8, padding: "10px 12px", color: C.text, fontSize: 13, fontFamily: "Georgia", outline: "none", boxSizing: "border-box" }} />
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 12, color: "#9370b8", marginBottom: 6 }}>Notas — opcional</div>
+            <textarea value={logNotes} onChange={e => setLogNotes(e.target.value)} placeholder="¿Cómo te sentiste?" rows={2}
+              style={{ width: "100%", background: C.bg, border: `1px solid ${C.purpleDark}`, borderRadius: 8, padding: "10px 12px", color: C.text, fontSize: 13, fontFamily: "Georgia", outline: "none", resize: "none", boxSizing: "border-box" }} />
+          </div>
+          <button onClick={logWorkout} style={{ width: "100%", background: C.purple, border: "none", borderRadius: 12, padding: 14, color: "#0e0e12", fontSize: 14, fontWeight: "bold", cursor: "pointer", fontFamily: "Georgia" }}>Guardar y compartir con Coach 💜</button>
+        </div>
+      </div>}
+
+      {showWeightModal && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "flex-end", zIndex: 100 }} onClick={() => setShowWeightModal(false)}>
+        <div style={{ background: C.surface, borderRadius: "20px 20px 0 0", padding: 20, width: "100%", border: `1px solid ${C.purpleDark}` }} onClick={e => e.stopPropagation()}>
+          <div style={{ fontSize: 16, fontWeight: "bold", color: C.purple, marginBottom: 16 }}>⚖️ Registrar peso corporal</div>
+          <input type="number" value={newBW} onChange={e => setNewBW(e.target.value)} placeholder="Ej: 68.5 kg"
+            style={{ width: "100%", background: C.bg, border: `1px solid ${C.purpleDark}`, borderRadius: 8, padding: "12px", color: C.text, fontSize: 16, fontFamily: "Georgia", outline: "none", marginBottom: 16, boxSizing: "border-box" }} />
+          <button onClick={addBodyWeight} style={{ width: "100%", background: C.purple, border: "none", borderRadius: 12, padding: 14, color: "#0e0e12", fontSize: 14, fontWeight: "bold", cursor: "pointer", fontFamily: "Georgia" }}>Guardar</button>
+        </div>
+      </div>}
+
+      <style>{`
+        @keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+        *{box-sizing:border-box}
+        ::-webkit-scrollbar{width:4px}
+        ::-webkit-scrollbar-thumb{background:#2d1f4a;border-radius:2px}
+        input::placeholder,textarea::placeholder{color:#4a3a6a}
+      `}</style>
+    </div>
+  );
+}
