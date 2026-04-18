@@ -698,6 +698,3 @@ export default function App() {
     </div>
   );
 }
-
-
-Commit changes → Commit changes y listo. 💜​​​​​​​​​​​​​​​​
