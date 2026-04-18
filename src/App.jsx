@@ -1,5 +1,3 @@
-Abrí src/App.jsx, tocá el lápiz ✏️, seleccioná todo y reemplazá con esto:
-
 import { useState, useEffect, useRef } from "react";
 
 const SYSTEM_PROMPT = `Sos una entrenadora personal experta y empática llamada "Coach". Conocés muy bien a tu clienta y tenés toda su información:
