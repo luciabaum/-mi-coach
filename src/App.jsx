@@ -61,7 +61,8 @@ const ROUTINE = {
 };
 
 const PHASE_WEEKS = 4;
-const C = { bg: "#0e0e12", surface: "#16101f", border: "#2a1f40", purple: "#c084fc", purpleDark: "#2d1f4a", purpleBorder: "#4a2d7a", text: "#e2d4f8", muted: "#7a6a9a", deep: "#1a0a2e" };
+const C = { bg: "#2c2a35", surface: "#3a3845", border: "#4e4a5e", purple: "#b39ddb", purpleDark: "#4a4560", purpleBorder: "#6b6485", text: "#ede8f5", muted: "#9e99b0", deep: "#242230" };
+const F = "Tahoma, sans-serif";
 
 export default function App() {
   const [tab, setTab] = useState("dashboard");
@@ -152,7 +153,7 @@ export default function App() {
   const getExProg = (id) => {
     const logs = exLogs[id] || [];
     if (logs.length < 2) return null;
-    return { diff: (parseFloat(logs[logs.length-1].weight) - parseFloat(logs[0].weight)).toFixed(1), last: logs[logs.length-1].weight };
+    return { diff: (parseFloat(logs[logs.length-1].weight) - parseFloat(logs[0].weight)).toFixed(1) };
   };
 
   const pi = getPhaseInfo();
@@ -165,29 +166,27 @@ export default function App() {
   );
 
   return (
-    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: "Georgia, serif", display: "flex", flexDirection: "column" }}>
+    <div style={{ minHeight: "100vh", background: C.bg, color: C.text, fontFamily: F, display: "flex", flexDirection: "column" }}>
 
-      {/* Header */}
-      <div style={{ background: `linear-gradient(135deg, ${C.deep}, #16082a)`, borderBottom: `1px solid #2d1f4a`, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <div style={{ background: `linear-gradient(135deg, ${C.deep}, #2e2b3a)`, borderBottom: `1px solid ${C.border}`, padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div>
           <div style={{ fontSize: 18, fontWeight: "bold", color: C.purple }}>💜 Mi Coach</div>
-          <div style={{ fontSize: 10, color: "#9370b8", letterSpacing: 2, textTransform: "uppercase" }}>Fase 1 · Semana {pi.week}/{PHASE_WEEKS}</div>
+          <div style={{ fontSize: 10, color: C.muted, letterSpacing: 2, textTransform: "uppercase" }}>Fase 1 · Semana {pi.week}/{PHASE_WEEKS}</div>
         </div>
         <div style={{ textAlign: "right" }}>
           <div style={{ background: C.purpleDark, borderRadius: 20, padding: "4px 12px", border: `1px solid ${C.purpleBorder}`, marginBottom: 4 }}>
-            <span style={{ fontSize: 14, fontWeight: "bold", color: pi.daysLeft <= 7 ? "#f97316" : C.purple }}>{pi.daysLeft}d</span>
+            <span style={{ fontSize: 14, fontWeight: "bold", color: pi.daysLeft <= 7 ? "#e8a87c" : C.purple }}>{pi.daysLeft}d</span>
             <span style={{ fontSize: 10, color: C.muted }}> para Fase 2</span>
           </div>
-          <div style={{ width: 100, height: 4, background: "#1e1630", borderRadius: 2, overflow: "hidden" }}>
-            <div style={{ width: `${pi.pct}%`, height: "100%", background: "linear-gradient(90deg,#7b3f8c,#c084fc)", borderRadius: 2 }} />
+          <div style={{ width: 100, height: 4, background: C.purpleDark, borderRadius: 2, overflow: "hidden" }}>
+            <div style={{ width: `${pi.pct}%`, height: "100%", background: `linear-gradient(90deg, #8b7bb5, ${C.purple})`, borderRadius: 2 }} />
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display: "flex", background: "#13101e", borderBottom: "1px solid #1e1630" }}>
+      <div style={{ display: "flex", background: C.deep, borderBottom: `1px solid ${C.border}` }}>
         {[["dashboard","📊","Dashboard"],["progreso","📈","Progreso"],["rutina","🏋️","Rutina"],["chat","💬","Coach"]].map(([id,icon,label]) => (
-          <button key={id} onClick={() => setTab(id)} style={{ flex: 1, padding: "10px 4px", border: "none", cursor: "pointer", background: tab===id ? C.deep : "transparent", color: tab===id ? C.purple : C.muted, fontSize: 11, fontFamily: "Georgia", borderBottom: tab===id ? `2px solid ${C.purple}` : "2px solid transparent" }}>
+          <button key={id} onClick={() => setTab(id)} style={{ flex: 1, padding: "10px 4px", border: "none", cursor: "pointer", background: tab===id ? C.surface : "transparent", color: tab===id ? C.purple : C.muted, fontSize: 11, fontFamily: F, borderBottom: tab===id ? `2px solid ${C.purple}` : "2px solid transparent" }}>
             <div style={{ fontSize: 16 }}>{icon}</div><div style={{ marginTop: 1 }}>{label}</div>
           </button>
         ))}
@@ -196,10 +195,10 @@ export default function App() {
       <div style={{ flex: 1, overflow: "auto", paddingBottom: 20 }}>
 
         {tab === "dashboard" && <div style={{ padding: 16 }}>
-          <div style={{ background: `linear-gradient(135deg,${C.deep},#200d3a)`, borderRadius: 14, padding: 16, border: `1px solid ${C.purpleBorder}`, marginBottom: 14 }}>
+          <div style={{ background: `linear-gradient(135deg, ${C.deep}, #322f40)`, borderRadius: 14, padding: 16, border: `1px solid ${C.purpleBorder}`, marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
               <div>
-                <div style={{ fontSize: 11, color: "#9370b8", marginBottom: 2 }}>🌱 Fase 1 — Reintroducción</div>
+                <div style={{ fontSize: 11, color: C.muted, marginBottom: 2 }}>🌱 Fase 1 — Reintroducción</div>
                 <div style={{ fontSize: 20, fontWeight: "bold", color: C.purple }}>{pi.daysLeft === 0 ? "¡Lista para Fase 2! 🎉" : `${pi.daysLeft} días restantes`}</div>
               </div>
               <div style={{ background: C.purpleDark, borderRadius: 10, padding: "6px 12px", textAlign: "center" }}>
@@ -208,21 +207,21 @@ export default function App() {
               </div>
             </div>
             <div style={{ background: C.bg, borderRadius: 6, height: 8, overflow: "hidden" }}>
-              <div style={{ width: `${pi.pct}%`, height: "100%", background: "linear-gradient(90deg,#7b3f8c,#c084fc)", borderRadius: 6 }} />
+              <div style={{ width: `${pi.pct}%`, height: "100%", background: `linear-gradient(90deg, #8b7bb5, ${C.purple})`, borderRadius: 6 }} />
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
-              <span style={{ fontSize: 10, color: "#5a4a7a" }}>Inicio</span>
+              <span style={{ fontSize: 10, color: C.muted }}>Inicio</span>
               <span style={{ fontSize: 10, color: C.purple }}>{Math.round(pi.pct)}% completada</span>
-              <span style={{ fontSize: 10, color: "#5a4a7a" }}>Fase 2</span>
+              <span style={{ fontSize: 10, color: C.muted }}>Fase 2</span>
             </div>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 14 }}>
             {[
-              { l: "Sesiones totales", v: workouts.length, i: "🔥", c: "#f97316" },
-              { l: "Esta semana", v: `${weekWos}/3`, i: "📅", c: "#34d399" },
-              { l: "Peso actual", v: currentBW ? `${currentBW}kg` : "—", i: "⚖️", c: "#60a5fa" },
-              { l: "Cambio total", v: bwDiff ? `${bwDiff > 0 ? "+" : ""}${bwDiff}kg` : "—", i: bwDiff < 0 ? "📉" : "📈", c: bwDiff < 0 ? "#34d399" : "#f97316" },
+              { l: "Sesiones totales", v: workouts.length, i: "🔥", c: "#e8a87c" },
+              { l: "Esta semana", v: `${weekWos}/3`, i: "📅", c: "#88c9a1" },
+              { l: "Peso actual", v: currentBW ? `${currentBW}kg` : "—", i: "⚖️", c: "#89b4e8" },
+              { l: "Cambio total", v: bwDiff ? `${bwDiff > 0 ? "+" : ""}${bwDiff}kg` : "—", i: bwDiff < 0 ? "📉" : "📈", c: bwDiff < 0 ? "#88c9a1" : "#e8a87c" },
             ].map((s, i) => (
               <div key={i} style={{ background: C.surface, borderRadius: 12, padding: 14, border: `1px solid ${C.border}` }}>
                 <div style={{ fontSize: 20 }}>{s.i}</div>
@@ -235,9 +234,9 @@ export default function App() {
           {card(<>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <div style={{ fontSize: 14, fontWeight: "bold", color: C.purple }}>⚖️ Peso corporal</div>
-              <button onClick={() => setShowWeightModal(true)} style={{ background: C.purpleDark, border: `1px solid ${C.purpleBorder}`, borderRadius: 8, color: C.purple, padding: "4px 10px", fontSize: 11, cursor: "pointer", fontFamily: "Georgia" }}>+ Registrar</button>
+              <button onClick={() => setShowWeightModal(true)} style={{ background: C.purpleDark, border: `1px solid ${C.purpleBorder}`, borderRadius: 8, color: C.purple, padding: "4px 10px", fontSize: 11, cursor: "pointer", fontFamily: F }}>+ Registrar</button>
             </div>
-            {bodyWeights.length === 0 ? <div style={{ color: "#5a4a7a", fontSize: 13, textAlign: "center", padding: "10px 0" }}>Todavía no registraste tu peso 🌱</div> : (
+            {bodyWeights.length === 0 ? <div style={{ color: C.muted, fontSize: 13, textAlign: "center", padding: "10px 0" }}>Todavía no registraste tu peso 🌱</div> : (
               <div>
                 <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 50, marginBottom: 6 }}>
                   {bodyWeights.slice(-12).map((bw, i, arr) => {
@@ -257,11 +256,11 @@ export default function App() {
           {card(<>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <div style={{ fontSize: 14, fontWeight: "bold", color: C.purple }}>🗓️ Últimas sesiones</div>
-              <button onClick={() => setShowLogModal(true)} style={{ background: C.purple, border: "none", borderRadius: 8, color: "#0e0e12", padding: "5px 12px", fontSize: 11, cursor: "pointer", fontFamily: "Georgia", fontWeight: "bold" }}>+ Registrar</button>
+              <button onClick={() => setShowLogModal(true)} style={{ background: C.purple, border: "none", borderRadius: 8, color: C.deep, padding: "5px 12px", fontSize: 11, cursor: "pointer", fontFamily: F, fontWeight: "bold" }}>+ Registrar</button>
             </div>
-            {workouts.length === 0 ? <div style={{ color: "#5a4a7a", fontSize: 13, textAlign: "center", padding: "10px 0" }}>¡Registrá tu primera sesión! 💪</div>
+            {workouts.length === 0 ? <div style={{ color: C.muted, fontSize: 13, textAlign: "center", padding: "10px 0" }}>¡Registrá tu primera sesión! 💪</div>
               : workouts.slice(0,5).map((w, i) => (
-                <div key={w.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: i<Math.min(workouts.length,5)-1 ? "1px solid #1e1630" : "none" }}>
+                <div key={w.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: i<Math.min(workouts.length,5)-1 ? `1px solid ${C.border}` : "none" }}>
                   <div>
                     <div style={{ fontSize: 13, color: C.text, fontWeight: "bold" }}>{w.day}</div>
                     <div style={{ fontSize: 11, color: C.muted }}>{w.subtitle}</div>
@@ -277,7 +276,7 @@ export default function App() {
           <div style={{ fontSize: 12, color: C.muted, marginBottom: 16 }}>Tocá un ejercicio para ver tu historial.</div>
           {ROUTINE.days.map((day, di) => (
             <div key={di} style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 11, color: "#9370b8", fontWeight: "bold", marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>{day.label} · {day.subtitle}</div>
+              <div style={{ fontSize: 11, color: C.muted, fontWeight: "bold", marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 }}>{day.label} · {day.subtitle}</div>
               {day.exercises.filter(e => !e.id.startsWith("e")).map(ex => {
                 const logs = exLogs[ex.id] || [];
                 const lastW = logs.length ? logs[logs.length-1].weight : null;
@@ -294,8 +293,8 @@ export default function App() {
                       <div style={{ textAlign: "right" }}>
                         {lastW ? <>
                           <div style={{ fontSize: 16, fontWeight: "bold", color: C.purple }}>{lastW}kg</div>
-                          {prog && <div style={{ fontSize: 11, color: prog.diff > 0 ? "#34d399" : "#f97316" }}>{prog.diff > 0 ? "+" : ""}{prog.diff}kg</div>}
-                        </> : <div style={{ fontSize: 11, color: "#4a3a6a" }}>Sin registros</div>}
+                          {prog && <div style={{ fontSize: 11, color: prog.diff > 0 ? "#88c9a1" : "#e8a87c" }}>{prog.diff > 0 ? "+" : ""}{prog.diff}kg</div>}
+                        </> : <div style={{ fontSize: 11, color: C.muted }}>Sin registros</div>}
                       </div>
                     </div>
                     {isOpen && <div style={{ marginTop: 12, paddingTop: 10, borderTop: `1px solid ${C.border}` }}>
@@ -316,7 +315,7 @@ export default function App() {
                             <span style={{ color: C.text, fontWeight: li===0 ? "bold" : "normal" }}>{l.weight}kg</span>
                           </div>
                         ))}
-                      </> : <div style={{ fontSize: 12, color: "#5a4a7a", textAlign: "center" }}>Registrá pesos en tu próxima sesión 💜</div>}
+                      </> : <div style={{ fontSize: 12, color: C.muted, textAlign: "center" }}>Registrá pesos en tu próxima sesión 💜</div>}
                     </div>}
                   </div>
                 );
@@ -329,9 +328,9 @@ export default function App() {
           {card(<>
             <div style={{ fontSize: 14, fontWeight: "bold", color: C.purple, marginBottom: 10 }}>💪 Bloque de Abs — Inicio de cada sesión</div>
             {ROUTINE.abs.map((ex, i) => (
-              <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: i<ROUTINE.abs.length-1 ? "1px solid #1e1630" : "none" }}>
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "7px 0", borderBottom: i<ROUTINE.abs.length-1 ? `1px solid ${C.border}` : "none" }}>
                 <div style={{ fontSize: 13 }}>{ex.name}</div>
-                <div style={{ fontSize: 12, color: "#9370b8" }}>{ex.sets}x{ex.reps}</div>
+                <div style={{ fontSize: 12, color: C.muted }}>{ex.sets}x{ex.reps}</div>
               </div>
             ))}
           </>, { border: `1px solid ${C.purpleBorder}` })}
@@ -345,12 +344,12 @@ export default function App() {
                 const logs = exLogs[ex.id] || [];
                 const lastW = logs.length ? logs[logs.length-1].weight : null;
                 return (
-                  <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: 8, padding: "7px 0", borderBottom: i<day.exercises.length-1 ? "1px solid #1e1630" : "none", alignItems: "center" }}>
+                  <div key={i} style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: 8, padding: "7px 0", borderBottom: i<day.exercises.length-1 ? `1px solid ${C.border}` : "none", alignItems: "center" }}>
                     <div>
                       <div style={{ fontSize: 13 }}>{ex.name}</div>
-                      {lastW && <div style={{ fontSize: 10, color: "#34d399" }}>Último: {lastW}kg</div>}
+                      {lastW && <div style={{ fontSize: 10, color: "#88c9a1" }}>Último: {lastW}kg</div>}
                     </div>
-                    <div style={{ fontSize: 11, color: "#9370b8" }}>{ex.sets}x{ex.reps}</div>
+                    <div style={{ fontSize: 11, color: C.muted }}>{ex.sets}x{ex.reps}</div>
                     <div style={{ fontSize: 11, color: C.purple, background: C.purpleDark, borderRadius: 6, padding: "2px 6px", textAlign: "center", minWidth: 58 }}>{ex.weight}</div>
                   </div>
                 );
@@ -364,14 +363,14 @@ export default function App() {
             {messages.map((m, i) => (
               <div key={i} style={{ display: "flex", justifyContent: m.role==="user" ? "flex-end" : "flex-start" }}>
                 {m.role==="assistant" && <div style={{ width: 28, height: 28, borderRadius: "50%", background: C.purpleDark, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, marginRight: 8, flexShrink: 0, alignSelf: "flex-end" }}>💜</div>}
-                <div style={{ maxWidth: "78%", padding: "10px 14px", borderRadius: m.role==="user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: m.role==="user" ? C.purple : "#1e1630", color: m.role==="user" ? "#0e0e12" : C.text, fontSize: 13, lineHeight: 1.55, border: m.role==="assistant" ? `1px solid ${C.purpleDark}` : "none" }}>
+                <div style={{ maxWidth: "78%", padding: "10px 14px", borderRadius: m.role==="user" ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: m.role==="user" ? C.purple : C.surface, color: m.role==="user" ? C.deep : C.text, fontSize: 13, lineHeight: 1.55, border: m.role==="assistant" ? `1px solid ${C.border}` : "none" }}>
                   {m.content}
                 </div>
               </div>
             ))}
             {loading && <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{ width: 28, height: 28, borderRadius: "50%", background: C.purpleDark, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14 }}>💜</div>
-              <div style={{ background: "#1e1630", border: `1px solid ${C.purpleDark}`, borderRadius: "18px 18px 18px 4px", padding: "10px 16px" }}>
+              <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: "18px 18px 18px 4px", padding: "10px 16px" }}>
                 <div style={{ display: "flex", gap: 4 }}>{[0,1,2].map(i => <div key={i} style={{ width: 6, height: 6, borderRadius: "50%", background: C.purple, animation: `bounce 1.2s ${i*.2}s infinite` }} />)}</div>
               </div>
             </div>}
@@ -379,65 +378,65 @@ export default function App() {
           </div>
           <div style={{ padding: "0 12px 8px", display: "flex", gap: 6, overflowX: "auto" }}>
             {["¿Cómo progreso?","Ajustá mi rutina","Tips para hoy","Registrar sesión"].map((q,i) => (
-              <button key={i} onClick={() => q==="Registrar sesión" ? setShowLogModal(true) : sendMessage(q)} style={{ background: "#1e1630", border: `1px solid ${C.purpleDark}`, borderRadius: 16, color: C.purple, padding: "5px 12px", fontSize: 11, cursor: "pointer", whiteSpace: "nowrap", fontFamily: "Georgia" }}>{q}</button>
+              <button key={i} onClick={() => q==="Registrar sesión" ? setShowLogModal(true) : sendMessage(q)} style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, color: C.purple, padding: "5px 12px", fontSize: 11, cursor: "pointer", whiteSpace: "nowrap", fontFamily: F }}>{q}</button>
             ))}
           </div>
-          <div style={{ padding: "8px 12px 16px", display: "flex", gap: 8, background: C.bg, borderTop: "1px solid #1e1630" }}>
+          <div style={{ padding: "8px 12px 16px", display: "flex", gap: 8, background: C.deep, borderTop: `1px solid ${C.border}` }}>
             <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key==="Enter" && !e.shiftKey && sendMessage(input)} placeholder="Escribile a tu coach..."
-              style={{ flex: 1, background: C.surface, border: `1px solid ${C.purpleDark}`, borderRadius: 20, padding: "10px 16px", color: C.text, fontSize: 13, fontFamily: "Georgia", outline: "none" }} />
-            <button onClick={() => sendMessage(input)} disabled={loading || !input.trim()} style={{ background: input.trim() ? C.purple : C.purpleDark, border: "none", borderRadius: "50%", width: 40, height: 40, color: input.trim() ? "#0e0e12" : "#5a4a7a", cursor: input.trim() ? "pointer" : "default", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>➤</button>
+              style={{ flex: 1, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 20, padding: "10px 16px", color: C.text, fontSize: 13, fontFamily: F, outline: "none" }} />
+            <button onClick={() => sendMessage(input)} disabled={loading || !input.trim()} style={{ background: input.trim() ? C.purple : C.purpleDark, border: "none", borderRadius: "50%", width: 40, height: 40, color: input.trim() ? C.deep : C.muted, cursor: input.trim() ? "pointer" : "default", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>➤</button>
           </div>
         </div>}
       </div>
 
-      {showStartModal && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 20 }}>
+      {showStartModal && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 200, padding: 20 }}>
         <div style={{ background: C.surface, borderRadius: 20, padding: 24, border: `1px solid ${C.purpleBorder}`, maxWidth: 320, width: "100%", textAlign: "center" }}>
           <div style={{ fontSize: 48, marginBottom: 12 }}>💜</div>
           <div style={{ fontSize: 18, fontWeight: "bold", color: C.purple, marginBottom: 8 }}>¡Bienvenida de vuelta!</div>
-          <div style={{ fontSize: 13, color: "#b09acc", lineHeight: 1.6, marginBottom: 20 }}>¿Arrancás la Fase 1 hoy? Vamos a contar las 4 semanas desde ahora.</div>
-          <button onClick={startPhase} style={{ width: "100%", background: C.purple, border: "none", borderRadius: 12, padding: 14, color: "#0e0e12", fontSize: 14, fontWeight: "bold", cursor: "pointer", fontFamily: "Georgia" }}>¡Arranco hoy! 🚀</button>
+          <div style={{ fontSize: 13, color: C.muted, lineHeight: 1.6, marginBottom: 20 }}>¿Arrancás la Fase 1 hoy? Vamos a contar las 4 semanas desde ahora.</div>
+          <button onClick={startPhase} style={{ width: "100%", background: C.purple, border: "none", borderRadius: 12, padding: 14, color: C.deep, fontSize: 14, fontWeight: "bold", cursor: "pointer", fontFamily: F }}>¡Arranco hoy! 🚀</button>
         </div>
       </div>}
 
-      {showLogModal && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "flex-end", zIndex: 100 }} onClick={() => setShowLogModal(false)}>
-        <div style={{ background: C.surface, borderRadius: "20px 20px 0 0", padding: 20, width: "100%", border: `1px solid ${C.purpleDark}`, maxHeight: "88vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
+      {showLogModal && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", zIndex: 100 }} onClick={() => setShowLogModal(false)}>
+        <div style={{ background: C.surface, borderRadius: "20px 20px 0 0", padding: 20, width: "100%", border: `1px solid ${C.border}`, maxHeight: "88vh", overflowY: "auto" }} onClick={e => e.stopPropagation()}>
           <div style={{ fontSize: 16, fontWeight: "bold", color: C.purple, marginBottom: 14 }}>🏋️ Registrar sesión</div>
           <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 12, color: "#9370b8", marginBottom: 6 }}>¿Qué día entrenaste?</div>
+            <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>¿Qué día entrenaste?</div>
             <div style={{ display: "flex", gap: 8 }}>
-              {ROUTINE.days.map((d,i) => <button key={i} onClick={() => setLogDay(i)} style={{ flex: 1, padding: "8px 4px", borderRadius: 8, cursor: "pointer", fontFamily: "Georgia", background: logDay===i ? C.purple : C.purpleDark, border: logDay===i ? "none" : `1px solid ${C.purpleBorder}`, color: logDay===i ? "#0e0e12" : C.purple, fontSize: 12, fontWeight: "bold" }}>{d.label}</button>)}
+              {ROUTINE.days.map((d,i) => <button key={i} onClick={() => setLogDay(i)} style={{ flex: 1, padding: "8px 4px", borderRadius: 8, cursor: "pointer", fontFamily: F, background: logDay===i ? C.purple : C.purpleDark, border: logDay===i ? "none" : `1px solid ${C.purpleBorder}`, color: logDay===i ? C.deep : C.purple, fontSize: 12, fontWeight: "bold" }}>{d.label}</button>)}
             </div>
           </div>
           <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 12, color: "#9370b8", marginBottom: 8 }}>Pesos usados hoy</div>
+            <div style={{ fontSize: 12, color: C.muted, marginBottom: 8 }}>Pesos usados hoy</div>
             {ROUTINE.days[logDay].exercises.filter(e => !e.id.startsWith("e")).map(ex => (
               <div key={ex.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                 <div style={{ flex: 1, fontSize: 12, color: C.text }}>{ex.name}</div>
                 <input type="number" placeholder="kg" value={logExW[ex.id]||""} onChange={e => setLogExW({...logExW,[ex.id]:e.target.value})}
-                  style={{ width: 64, background: C.bg, border: `1px solid ${C.purpleDark}`, borderRadius: 8, padding: "6px 8px", color: C.text, fontSize: 13, fontFamily: "Georgia", outline: "none", textAlign: "center" }} />
+                  style={{ width: 64, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "6px 8px", color: C.text, fontSize: 13, fontFamily: F, outline: "none", textAlign: "center" }} />
               </div>
             ))}
           </div>
           <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 12, color: "#9370b8", marginBottom: 6 }}>Peso corporal (kg) — opcional</div>
+            <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>Peso corporal (kg) — opcional</div>
             <input type="number" value={logBodyW} onChange={e => setLogBodyW(e.target.value)} placeholder="Ej: 68.5"
-              style={{ width: "100%", background: C.bg, border: `1px solid ${C.purpleDark}`, borderRadius: 8, padding: "10px 12px", color: C.text, fontSize: 13, fontFamily: "Georgia", outline: "none", boxSizing: "border-box" }} />
+              style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 12px", color: C.text, fontSize: 13, fontFamily: F, outline: "none", boxSizing: "border-box" }} />
           </div>
           <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 12, color: "#9370b8", marginBottom: 6 }}>Notas — opcional</div>
+            <div style={{ fontSize: 12, color: C.muted, marginBottom: 6 }}>Notas — opcional</div>
             <textarea value={logNotes} onChange={e => setLogNotes(e.target.value)} placeholder="¿Cómo te sentiste?" rows={2}
-              style={{ width: "100%", background: C.bg, border: `1px solid ${C.purpleDark}`, borderRadius: 8, padding: "10px 12px", color: C.text, fontSize: 13, fontFamily: "Georgia", outline: "none", resize: "none", boxSizing: "border-box" }} />
+              style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "10px 12px", color: C.text, fontSize: 13, fontFamily: F, outline: "none", resize: "none", boxSizing: "border-box" }} />
           </div>
-          <button onClick={logWorkout} style={{ width: "100%", background: C.purple, border: "none", borderRadius: 12, padding: 14, color: "#0e0e12", fontSize: 14, fontWeight: "bold", cursor: "pointer", fontFamily: "Georgia" }}>Guardar y compartir con Coach 💜</button>
+          <button onClick={logWorkout} style={{ width: "100%", background: C.purple, border: "none", borderRadius: 12, padding: 14, color: C.deep, fontSize: 14, fontWeight: "bold", cursor: "pointer", fontFamily: F }}>Guardar y compartir con Coach 💜</button>
         </div>
       </div>}
 
-      {showWeightModal && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", display: "flex", alignItems: "flex-end", zIndex: 100 }} onClick={() => setShowWeightModal(false)}>
-        <div style={{ background: C.surface, borderRadius: "20px 20px 0 0", padding: 20, width: "100%", border: `1px solid ${C.purpleDark}` }} onClick={e => e.stopPropagation()}>
+      {showWeightModal && <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "flex-end", zIndex: 100 }} onClick={() => setShowWeightModal(false)}>
+        <div style={{ background: C.surface, borderRadius: "20px 20px 0 0", padding: 20, width: "100%", border: `1px solid ${C.border}` }} onClick={e => e.stopPropagation()}>
           <div style={{ fontSize: 16, fontWeight: "bold", color: C.purple, marginBottom: 16 }}>⚖️ Registrar peso corporal</div>
           <input type="number" value={newBW} onChange={e => setNewBW(e.target.value)} placeholder="Ej: 68.5 kg"
-            style={{ width: "100%", background: C.bg, border: `1px solid ${C.purpleDark}`, borderRadius: 8, padding: "12px", color: C.text, fontSize: 16, fontFamily: "Georgia", outline: "none", marginBottom: 16, boxSizing: "border-box" }} />
-          <button onClick={addBodyWeight} style={{ width: "100%", background: C.purple, border: "none", borderRadius: 12, padding: 14, color: "#0e0e12", fontSize: 14, fontWeight: "bold", cursor: "pointer", fontFamily: "Georgia" }}>Guardar</button>
+            style={{ width: "100%", background: C.bg, border: `1px solid ${C.border}`, borderRadius: 8, padding: "12px", color: C.text, fontSize: 16, fontFamily: F, outline: "none", marginBottom: 16, boxSizing: "border-box" }} />
+          <button onClick={addBodyWeight} style={{ width: "100%", background: C.purple, border: "none", borderRadius: 12, padding: 14, color: C.deep, fontSize: 14, fontWeight: "bold", cursor: "pointer", fontFamily: F }}>Guardar</button>
         </div>
       </div>}
 
@@ -445,8 +444,8 @@ export default function App() {
         @keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
         *{box-sizing:border-box}
         ::-webkit-scrollbar{width:4px}
-        ::-webkit-scrollbar-thumb{background:#2d1f4a;border-radius:2px}
-        input::placeholder,textarea::placeholder{color:#4a3a6a}
+        ::-webkit-scrollbar-thumb{background:${C.purpleDark};border-radius:2px}
+        input::placeholder,textarea::placeholder{color:${C.muted}}
       `}</style>
     </div>
   );
